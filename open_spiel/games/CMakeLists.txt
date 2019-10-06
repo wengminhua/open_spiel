@@ -71,6 +71,8 @@ add_library (games OBJECT
   tiny_bridge.h
   y.cc
   y.h
+  gomoku.cc
+  gomoku.h
 )
 target_include_directories (games PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -271,3 +273,7 @@ add_test(tiny_bridge_test tiny_bridge_test)
 add_executable(y_test y_test.cc ${OPEN_SPIEL_OBJECTS}
                $<TARGET_OBJECTS:tests>)
 add_test(y_test y_test)
+
+add_executable(gomoku_test gomoku_test.cc ${OPEN_SPIEL_OBJECTS}
+               $<TARGET_OBJECTS:tests>)
+add_test(gomoku_test gomoku_test)

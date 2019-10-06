@@ -71,6 +71,7 @@ class PyspielTest(absltest.TestCase):
         "tiny_bridge_4p",
         "turn_based_simultaneous_game",
         "y",
+        "gomoku"
     ]
     self.assertCountEqual(game_names, expected)
 
