@@ -1,0 +1,11 @@
+Bootstrap: docker
+From: tensorflow/tensorflow:1.14.0-gpu-py3
+
+%files
+    requirements_gpu.txt /var/run/
+
+%post
+    pip_path=`which pip3`
+    sed -i 's/import main/import __main__/' $pip_path
+    sed -i 's/sys.exit(main())/sys.exit(__main__._main())/' $pip_path
+    pip3 install -r /var/run/requirements_gpu.txt
