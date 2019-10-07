@@ -3,9 +3,15 @@ From: tensorflow/tensorflow:1.14.0-gpu-py3
 
 %files
     requirements_gpu.txt /opt/
+    sources.list /etc/apt/
 
 %post
     pip_path=`which pip3`
     sed -i 's/import main/import __main__/' $pip_path
     sed -i 's/sys.exit(main())/sys.exit(__main__._main())/' $pip_path
     pip3 install -r /opt/requirements_gpu.txt
+
+    apt-get update && apt-get install -y \
+        git \
+        wget \
+
