@@ -42,34 +42,6 @@ flags.DEFINE_boolean(
     "Whether to run an interactive play with the agent after training.")
 
 
-def pretty_board(time_step):
-  """Returns the board in `time_step` in a human readable format."""
-  info_state = time_step.observations["info_state"][0]
-  x_locations = np.nonzero(info_state[9:18])[0]
-  o_locations = np.nonzero(info_state[18:])[0]
-  board = np.full(3 * 3, ".")
-  board[x_locations] = "X"
-  board[o_locations] = "0"
-  board = np.reshape(board, (3, 3))
-  return board
-
-
-def command_line_action(time_step):
-  """Gets a valid action from the user on the command line."""
-  current_player = time_step.observations["current_player"]
-  legal_actions = time_step.observations["legal_actions"][current_player]
-  action = -1
-  while action not in legal_actions:
-    print("Choose an action from {}:".format(legal_actions))
-    sys.stdout.flush()
-    action_str = input()
-    try:
-      action = int(action_str)
-    except ValueError:
-      continue
-  return action
-
-
 def eval_against_random_bots(env, trained_agents, random_agents, num_episodes):
   """Evaluates `trained_agents` against `random_agents` for `num_episodes`."""
   num_players = len(trained_agents)
@@ -91,7 +63,7 @@ def eval_against_random_bots(env, trained_agents, random_agents, num_episodes):
 
 
 def main(_):
-  game = "tic_tac_toe"
+  game = "gomoku"
   num_players = 2
   env = rl_environment.Environment(game)
   state_size = env.observation_spec()["info_state"][0]
@@ -103,23 +75,23 @@ def main(_):
   loss_report_interval = 1000
 
   with tf.Session() as sess:
-    dqn_agent = dqn.DQN(
-        sess,
-        player_id=0,
-        state_representation_size=state_size,
-        num_actions=num_actions,
-        hidden_layers_sizes=hidden_layers_sizes,
-        replay_buffer_capacity=replay_buffer_capacity)
-    tabular_q_agent = tabular_qlearner.QLearner(
-        player_id=1, num_actions=num_actions)
-    agents = [dqn_agent, tabular_q_agent]
+    agents = [
+        dqn.DQN(
+            session=sess,
+            player_id=idx,
+            state_representation_size=state_size,
+            num_actions=num_actions,
+            hidden_layers_sizes=hidden_layers_sizes,
+            replay_buffer_capacity=replay_buffer_capacity) for idx in range(num_players)
+    ]
 
     sess.run(tf.global_variables_initializer())
 
     # Train agent
     for ep in range(train_episodes):
       if ep and ep % loss_report_interval == 0:
-        logging.info("[%s/%s] DQN loss: %s", ep, train_episodes, agents[0].loss)
+        logging.info("[%s/%s] DQN loss 0: %s", ep, train_episodes, agents[0].loss)
+        logging.info("[%s/%s] DQN loss 1: %s", ep, train_episodes, agents[1].loss)
       time_step = env.reset()
       while not time_step.last():
         player_id = time_step.observations["current_player"]
@@ -138,40 +110,7 @@ def main(_):
     ]
     r_mean = eval_against_random_bots(env, agents, random_agents, 1000)
     logging.info("Mean episode rewards: %s", r_mean)
-
-    if not FLAGS.iteractive_play:
-      return
-
-    # Play from the command line against the trained DQN agent.
-    human_player = 1
-    while True:
-      logging.info("You are playing as %s", "O" if human_player else "X")
-      time_step = env.reset()
-      while not time_step.last():
-        player_id = time_step.observations["current_player"]
-        if player_id == human_player:
-          agent_out = agents[human_player].step(time_step, is_evaluation=True)
-          logging.info("\n%s", agent_out.probs.reshape((3, 3)))
-          logging.info("\n%s", pretty_board(time_step))
-          action = command_line_action(time_step)
-        else:
-          agent_out = agents[1 - human_player].step(
-              time_step, is_evaluation=True)
-          action = agent_out.action
-        time_step = env.step([action])
-
-      logging.info("\n%s", pretty_board(time_step))
-
-      logging.info("End of game!")
-      if time_step.rewards[human_player] > 0:
-        logging.info("You win")
-      elif time_step.rewards[human_player] < 0:
-        logging.info("You lose")
-      else:
-        logging.info("Draw")
-      # Switch order of players
-      human_player = 1 - human_player
-
+    return
 
 if __name__ == "__main__":
   app.run(main)
