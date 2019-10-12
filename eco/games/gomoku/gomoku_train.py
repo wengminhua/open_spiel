@@ -36,10 +36,12 @@ from open_spiel.python.algorithms import tabular_qlearner
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer("num_episodes", int(5e4), "Number of train episodes.")
-flags.DEFINE_boolean(
-    "iteractive_play", True,
-    "Whether to run an interactive play with the agent after training.")
+flags.DEFINE_string("checkpoint_dir", "/tmp/gomoku_dqn", 
+  "Directory to save/load the agent.")
+flags.DEFINE_integer("num_episodes", int(5e4), 
+  "Number of train episodes.")
+flags.DEFINE_boolean("iteractive_play", True,
+  "Whether to run an interactive play with the agent after training.")
 
 
 def eval_against_random_bots(env, trained_agents, random_agents, num_episodes):
@@ -68,7 +70,7 @@ def main(_):
   env = rl_environment.Environment(game)
   state_size = env.observation_spec()["info_state"][0]
   num_actions = env.action_spec()["num_actions"]
-
+  
   hidden_layers_sizes = [32, 32]
   replay_buffer_capacity = int(1e4)
   train_episodes = FLAGS.num_episodes
@@ -84,7 +86,7 @@ def main(_):
             hidden_layers_sizes=hidden_layers_sizes,
             replay_buffer_capacity=replay_buffer_capacity) for idx in range(num_players)
     ]
-
+    saver = tf.train.Saver()
     sess.run(tf.global_variables_initializer())
 
     # Train agent
@@ -92,6 +94,7 @@ def main(_):
       if ep and ep % loss_report_interval == 0:
         logging.info("[%s/%s] DQN loss 0: %s", ep, train_episodes, agents[0].loss)
         logging.info("[%s/%s] DQN loss 1: %s", ep, train_episodes, agents[1].loss)
+        saver.save(sess, FLAGS.checkpoint_dir, ep)
       time_step = env.reset()
       while not time_step.last():
         player_id = time_step.observations["current_player"]
